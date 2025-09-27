@@ -88,3 +88,4 @@ else
     create_log "ERROR" "Backup failed during compression."
     exit 1
 fi
+
