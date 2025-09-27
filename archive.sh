@@ -13,16 +13,40 @@ help_info() {
     echo " - -h                  Show this help message and exit (This flag must be the first argument)"
 }
 
+# Takes a log as input, and both prints it to the terminal and records it in the archive.log file with a timestamp:
+create_log() {
+    local LOG_TYPE="$1"
+    local LOG_MESSAGE="$2"
+    local LOG_TIMESTAMP=$(date +"%m/%d/%Y %H:%M:%S")
+
+    local LOG="$LOG_TYPE: [$LOG_TIMESTAMP] $LOG_MESSAGE"
+    
+    # Depending on the LOG_TYPE, we print the log to stdout (INFO) or stderr (ERROR):
+    if [[ "$LOG_TYPE" == "INFO" ]]; then
+        echo "$LOG"
+    else
+        echo "$LOG" >&2
+    fi
+
+    # We then print the log to archive.log:
+    echo "$LOG" >> "$LOG_FILE"
+}
+
 # Handles the -h flag (Help):
 if [[ "$1" == "-h" ]]; then
     help_info
     exit 0
 fi
 
+# We create a log file in the current directory to record all the logs generated during execution:
+LOG_FILE="./archive.log"
+
+create_log "INFO" "archive script started."
+
 # Checks the argument count (Note: Both a source_directory and a target_directory are
 # needed for this initial template, but this won't be the case in future parts):
-if [[ $# -ne 2 ]]; then
-    echo "ERROR: A valid source_directory and target_directory must be provided.  You can learn more about the usage format with the -h flag."
+if [[ $# -lt 2 ]]; then
+    create_log "ERROR" "A valid source_directory and target_directory must be provided.  You can learn more about the usage format with the -h flag."
     exit 1
 fi
 
@@ -31,20 +55,30 @@ TARGET="$2"
 
 # Checks if the source_directory exists:
 if [[ ! -d "$SOURCE" ]]; then
-    echo "ERROR: The given source_directory '$SOURCE' does not exist..."
+    create_log "ERROR" "Source directory ($SOURCE) does not exist or is not readable. Exiting."
     exit 1
 fi
 
-# We create a new folder in the target_directory with the current timestamp:
+# Checks if the target_directory exists.  If not, we attempt to create it:
+if [[ ! -d "$TARGET" ]]; then
+    mkdir -p "$TARGET"
+
+    if [[ ! -d "$TARGET" ]]; then
+        create_log "ERROR" "Target directory ($TARGET) does not exist or could not be created. Exiting."
+        exit 1
+    fi
+fi
+
+# We create a .tar.gz archive in the target_directory with the current timestamp:
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-DEST="$TARGET/backup_$TIMESTAMP"
+ARCHIVE="$TARGET/backup_$TIMESTAMP.tar.gz"
 
-mkdir -p "$DEST" || { echo "ERROR: Could not create target_directory '$DEST'..."; exit 1; }
+# Finally, we copy the files from source_directory into this new .tar.gz archive:
+create_log "INFO" "Backing up from $SOURCE to $ARCHIVE."
 
-# Finally, we copy the files from source_directory into this new folder in target_directory:
-if cp -rp "$SOURCE"/. "$DEST"/; then
-    echo "INFO: Finished backing up files from '$SOURCE' to '$DEST'."
+if tar -czf "$ARCHIVE" -C "$SOURCE" .; then
+    create_log "INFO" "Backup completed successfully."
 else
-    echo "ERROR: Failed to back up files from '$SOURCE' to '$DEST'..."
+    create_log "ERROR" "Backup failed during compression."
     exit 1
 fi

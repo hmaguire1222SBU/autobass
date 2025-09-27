@@ -1,3 +1,6 @@
 # Ignores the source_directory and target_directory folders I'm using for testing:
 src_dir_test
 target_dir_test
+
+# Ignores the archive.log file created during execution for storing logs:
+./archive.log
