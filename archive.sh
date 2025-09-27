@@ -10,7 +10,9 @@ help_info() {
     echo " - target_directory:  The path to the folder where the backup will be stored."
     echo
     echo "Options:"
-    echo " - -h                  Show this help message and exit (This flag must be the first argument)"
+    echo " - -h         Show this help message and exit (This flag must be the first argument)."
+    echo " - -d         Executes the script in dry-run mode, which displays what items WOULD be backed up, without performing an actual backup"
+    echo "              (This flag must be the first argument if no source_directory and target_directory are given, and the third argument if they are given)."
 }
 
 # Takes a log as input, and both prints it to the terminal and records it in the archive.log file with a timestamp:
@@ -42,16 +44,29 @@ fi
 LOG_FILE="./archive.log"
 create_log "INFO" "archive script started."
 
+DRY_RUN="false"
+
 # We use the source_directory and target_directory arguments given by the user:
 if [[ $# -ge 2 ]]; then
     SOURCE="$1"
     TARGET="$2"
+
+    # Handles the -d flag (Dry run):
+    if [[ "$3" == "-d" ]]; then
+        DRY_RUN="true"
+    fi
 
 # If these arguments were not given, we instead use the default values in archive.conf:
 else
     CONFIG_FILE="./archive.conf"
     if [[ -f "$CONFIG_FILE" ]]; then
         source "$CONFIG_FILE"
+        
+        # Handles the -d flag (Dry run):
+        if [[ "$1" == "-d" ]]; then
+            DRY_RUN="true"
+        fi
+
     else
         create_log "ERROR" "Configuration file ($CONFIG_FILE) not found."
         exit 1
@@ -79,14 +94,32 @@ TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 ARCHIVE="$TARGET/backup_$TIMESTAMP.tar.gz"
 
 # Finally, we copy the files from source_directory into this new .tar.gz archive:
-create_log "INFO" "Backing up from $SOURCE to $ARCHIVE."
 
-if tar -czf "$ARCHIVE" -C "$SOURCE" .; then
-    create_log "INFO" "Backup completed successfully."
-    exit 0
+# Performing a dry-run of a backup:
+if [[ $DRY_RUN == "true" ]]; then
+    create_log "INFO" "Dry-run enabled. Simulating backup."
+    create_log "INFO" "Backing up from $SOURCE to $ARCHIVE."
+
+    # Creates a compressed tar as normal, but instead of placing it in ARCHIVE we immediately decompress it and list its contents
+    if tar -czf - -C "$SOURCE" . | tar -tzf -; then
+        create_log "INFO" "Dry-run backup completed successfully."
+        exit 0
+    else
+        create_log "ERROR" "Dry-run backup failed during compression."
+        exit 1
+    fi
+
+# Performing a backup normally:
 else
-    create_log "ERROR" "Backup failed during compression."
-    exit 1
+    create_log "INFO" "Backing up from $SOURCE to $ARCHIVE."
+
+    if tar -czf "$ARCHIVE" -C "$SOURCE" .; then
+        create_log "INFO" "Backup completed successfully."
+        exit 0
+    else
+        create_log "ERROR" "Backup failed during compression."
+        exit 1
+    fi
 fi
 
 
