@@ -2,6 +2,7 @@
 
 # Prints the usage instructions when the -h flag is used:
 help_info() {
+    echo
     echo "Usage format: $0 <source_directory> <target_directory>"
     echo
     echo "Arguments:"
@@ -9,11 +10,11 @@ help_info() {
     echo " - target_directory:  The path to the folder where the backup will be stored."
     echo
     echo "Options:"
-    echo " - h                  Show this help message and exit"
+    echo " - -h                  Show this help message and exit (This flag must be the first argument)"
 }
 
 # Handles the -h flag (Help):
-if [[ "$1" == "-h"]]; then
+if [[ "$1" == "-h" ]]; then
     help_info
     exit 0
 fi
@@ -41,6 +42,9 @@ DEST="$TARGET/backup_$TIMESTAMP"
 mkdir -p "$DEST" || { echo "ERROR: Could not create target_directory '$DEST'..."; exit 1; }
 
 # Finally, we copy the files from source_directory into this new folder in target_directory:
-rsync -av "$SOURCE"/ "$DEST"/
-
-echo "Finished backing up files from '$SOURCE' to '$DEST'."
+if cp -rp "$SOURCE"/. "$DEST"/; then
+    echo "INFO: Finished backing up files from '$SOURCE' to '$DEST'."
+else
+    echo "ERROR: Failed to back up files from '$SOURCE' to '$DEST'..."
+    exit 1
+fi
