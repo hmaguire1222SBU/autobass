@@ -1,0 +1,1 @@
+Default text document to be sourced by the archive.sh script.

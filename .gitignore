@@ -4,3 +4,6 @@ target_dir_test
 
 # Ignores the archive.log file created during execution for storing logs:
 archive.log
+
+# Ignores the default_target folder that may be created if no arguments are given when calling archive.sh:
+default_target

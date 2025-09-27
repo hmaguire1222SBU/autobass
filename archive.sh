@@ -40,18 +40,23 @@ fi
 
 # We create a log file in the current directory to record all the logs generated during execution:
 LOG_FILE="./archive.log"
-
 create_log "INFO" "archive script started."
 
-# Checks the argument count (Note: Both a source_directory and a target_directory are
-# needed for this initial template, but this won't be the case in future parts):
-if [[ $# -lt 2 ]]; then
-    create_log "ERROR" "A valid source_directory and target_directory must be provided.  You can learn more about the usage format with the -h flag."
-    exit 1
-fi
+# We use the source_directory and target_directory arguments given by the user:
+if [[ $# -ge 2 ]]; then
+    SOURCE="$1"
+    TARGET="$2"
 
-SOURCE="$1"
-TARGET="$2"
+# If these arguments were not given, we instead use the default values in archive.conf:
+else
+    CONFIG_FILE="./archive.conf"
+    if [[ -f "$CONFIG_FILE" ]]; then
+        source "$CONFIG_FILE"
+    else
+        create_log "ERROR" "Configuration file ($CONFIG_FILE) not found."
+        exit 1
+    fi
+fi
 
 # Checks if the source_directory exists:
 if [[ ! -d "$SOURCE" ]]; then
@@ -78,6 +83,7 @@ create_log "INFO" "Backing up from $SOURCE to $ARCHIVE."
 
 if tar -czf "$ARCHIVE" -C "$SOURCE" .; then
     create_log "INFO" "Backup completed successfully."
+    exit 0
 else
     create_log "ERROR" "Backup failed during compression."
     exit 1
