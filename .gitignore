@@ -3,4 +3,4 @@ src_dir_test
 target_dir_test
 
 # Ignores the archive.log file created during execution for storing logs:
-./archive.log
+archive.log
