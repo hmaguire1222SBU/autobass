@@ -1,1 +1,1 @@
-Default text document in a subfolder.
+Default text file in a subfolder.
