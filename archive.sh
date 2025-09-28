@@ -103,8 +103,11 @@ if [[ ! -d "$SOURCE" ]]; then
 fi
 
 # Checks if the target_directory exists.  If not, we attempt to create it:
+TARGET_CREATED="false"
+
 if [[ ! -d "$TARGET" ]]; then
     mkdir -p "$TARGET"
+    TARGET_CREATED="true"
 
     if [[ ! -d "$TARGET" ]]; then
         create_log "ERROR" "Target directory ($TARGET) does not exist or could not be created. Exiting."
@@ -128,11 +131,21 @@ if [[ $DRY_RUN == "true" ]]; then
     # If the exclusion file .bassignore is detected, we incorporate it into the tar command:
     if [[ -f "$EXCLUDE_FILE" ]]; then
         # This line creates a compressed tar as normal, but instead of placing it in ARCHIVE we immediately decompress it and list its contents!
-        if tar -czf - -C "$SOURCE" . --exclude-from="$EXCLUDE_FILE" | tar -tzf -; then
+        if tar -czf - --exclude-from="$EXCLUDE_FILE" -C "$SOURCE" . | tar -tzf -; then
             create_log "INFO" "Dry-run backup completed successfully."
+
+            if [[ "$TARGET_CREATED" == "true" ]]; then
+                rmdir "$TARGET"
+            fi
+
             exit 0
         else
             create_log "ERROR" "Dry-run backup failed during compression."
+
+            if [[ "$TARGET_CREATED" == "true" ]]; then
+                rmdir "$TARGET"
+            fi
+
             exit 1
         fi
 
@@ -140,9 +153,19 @@ if [[ $DRY_RUN == "true" ]]; then
         # This line creates a compressed tar as normal, but instead of placing it in ARCHIVE we immediately decompress it and list its contents!
         if tar -czf - -C "$SOURCE" . | tar -tzf -; then
             create_log "INFO" "Dry-run backup completed successfully."
+
+            if [[ "$TARGET_CREATED" == "true" ]]; then
+                rmdir "$TARGET"
+            fi
+
             exit 0
         else
             create_log "ERROR" "Dry-run backup failed during compression."
+
+            if [[ "$TARGET_CREATED" == "true" ]]; then
+                rmdir "$TARGET"
+            fi
+
             exit 1
         fi
     fi
@@ -153,7 +176,7 @@ else
 
     # If the exclusion file .bassignore is detected, we incorporate it into the tar command:
     if [[ -f "$EXCLUDE_FILE" ]]; then
-        if tar -czf "$ARCHIVE" -C "$SOURCE" . --exclude-from="$EXCLUDE_FILE"; then
+        if tar -czf "$ARCHIVE" --exclude-from="$EXCLUDE_FILE" -C "$SOURCE" .; then
             create_log "INFO" "Backup completed successfully."
             exit 0
         else
